@@ -1,0 +1,36 @@
+package com.dnsmanager.commands;
+
+import com.dnsmanager.models.DnsRecord;
+import com.dnsmanager.services.ZoneFileService;
+import java.util.List;
+
+public class ListCommand implements Command {
+    private final ZoneFileService zoneService;
+    private final String zoneName;
+    
+    public ListCommand(ZoneFileService zoneService, String zoneName) {
+        this.zoneService = zoneService;
+        this.zoneName = zoneName;
+    }
+    
+    @Override
+    public void execute(String[] args) throws Exception {
+        System.out.println("DNS Records for " + zoneName + ":");
+        System.out.println("─".repeat(60));
+        
+        List<DnsRecord> records = zoneService.parseRecords();
+        
+        if (records.isEmpty()) {
+            System.out.println("  No records found");
+        } else {
+            for (DnsRecord record : records) {
+                System.out.println("  " + record);
+            }
+        }
+    }
+    
+    @Override
+    public String getUsage() {
+        return "list - List all DNS records";
+    }
+}

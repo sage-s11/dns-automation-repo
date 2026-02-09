@@ -1,0 +1,21 @@
+$TTL 86400
+@   IN  SOA ns1.10.10.10.in-addr.arpa. admin.10.10.10.in-addr.arpa. (
+        2026020708 ; Serial
+        3600       ; Refresh
+        1800       ; Retry
+        604800     ; Expire
+        86400 )    ; Minimum
+
+; Nameserver
+@   IN  NS  ns1.10.10.10.in-addr.arpa.
+ns1 IN  A   192.168.1.17
+
+; PTR Records
+
+99	IN	PTR	testptr.testzone5.local.
+71	IN	PTR	testptr1.testzone3.local.
+88	IN	PTR	web.testzone5.local.
+66	IN	PTR	mail.testzone3.local.
+55	IN	PTR	db.testzone3.local.
+44	IN	PTR	cache.examplenv.demo.
+200	IN	PTR	www.testzone5.local.

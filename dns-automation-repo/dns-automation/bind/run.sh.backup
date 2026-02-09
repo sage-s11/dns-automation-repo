@@ -1,0 +1,20 @@
+#!/bin/bash
+BASE_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Create required directories if they don't exist
+mkdir -p "$BASE_DIR/cache/bind"
+mkdir -p "$BASE_DIR/run/named"
+mkdir -p "$BASE_DIR/logs/bind"
+
+podman run -d \
+  --name bind9-demo \
+  -p 127.0.0.1:1053:53/udp \
+  -p 127.0.0.1:1053:53/tcp \
+  -p 127.0.0.1:1953:1953/tcp \
+  -v "$BASE_DIR/config/named.conf":/etc/bind/named.conf:Z \
+  -v "$BASE_DIR/config/rndc/rndc.key":/etc/bind/rndc.key:Z \
+  -v "$BASE_DIR/zones":/zones:Z \
+  -v "$BASE_DIR/cache/bind":/var/cache/bind:Z \
+  -v "$BASE_DIR/run/named":/run/named:Z \
+  -v "$BASE_DIR/logs/bind":/var/log/bind:Z \
+  docker.io/internetsystemsconsortium/bind9:9.18

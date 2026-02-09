@@ -1,0 +1,9 @@
+# Create sample CSV instantly
+cat > dns-records.csv << 'EOF'
+hostname,ip,type,zone,ttl
+web-prod-01,10.10.10.50,A,prod.local,3600
+web-prod-02,10.10.10.51,A,prod.local,3600
+db-prod-01,10.10.10.60,A,prod.local,3600
+cache-prod-01,10.10.10.70,A,prod.local,3600
+old-test-server,10.10.10.99,A,test.local,3600
+EOF

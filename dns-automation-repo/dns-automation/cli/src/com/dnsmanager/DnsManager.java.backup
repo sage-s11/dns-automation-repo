@@ -1,0 +1,137 @@
+package com.dnsmanager;
+
+import com.dnsmanager.commands.*;
+import com.dnsmanager.services.*;
+import java.nio.file.*;
+import java.util.*;
+
+/**
+ * Main DNS Manager - Modular Architecture
+ * 
+ * This is the entry point that orchestrates all commands and services.
+ */
+public class DnsManager {
+    // Configuration
+    private static final Path ZONE_FILE = Paths.get("zones/db.examplenv.demo");
+    private static final String ZONE_NAME = "examplenv.demo";
+    private static final String CONTAINER_NAME = "bind9-demo";
+    private static final int RNDC_PORT = 1953;
+    private static final int MAX_BACKUPS = 10;
+    
+    // Services (shared across commands)
+    private static ZoneFileService zoneService;
+    private static DnsServerService serverService;
+    private static BackupService backupService;
+    
+    // Command registry
+    private static Map<String, Command> commands;
+    
+    public static void main(String[] args) {
+        try {
+            // Initialize services
+            initializeServices();
+            
+            // Initialize commands
+            initializeCommands();
+            
+            // Parse and execute command
+            if (args.length == 0) {
+                printUsage();
+                return;
+            }
+            
+            String commandName = args[0];
+            Command command = commands.get(commandName);
+            
+            if (command == null) {
+                System.err.println("Unknown command: " + commandName);
+                printUsage();
+                System.exit(1);
+            }
+            
+            // Extract arguments (skip command name)
+            String[] commandArgs = Arrays.copyOfRange(args, 1, args.length);
+            
+            // Execute command
+            command.execute(commandArgs);
+            
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error: " + e.getMessage());
+            System.exit(1);
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
+        }
+    }
+    
+    /**
+     * Initialize all services
+     */
+    private static void initializeServices() {
+        Path backupDir = ZONE_FILE.getParent().resolve("backups");
+        
+        zoneService = new ZoneFileService(ZONE_FILE);
+        serverService = new DnsServerService(CONTAINER_NAME, ZONE_NAME, RNDC_PORT);
+        backupService = new BackupService(backupDir, MAX_BACKUPS);
+    }
+    
+    /**
+     * Initialize all commands
+     */
+    private static void initializeCommands() {
+        commands = new LinkedHashMap<>();
+        
+        commands.put("list", new ListCommand(zoneService, ZONE_NAME));
+        commands.put("add", new AddCommand(zoneService, backupService, serverService, ZONE_NAME));
+        commands.put("update", new UpdateCommand(zoneService, backupService, serverService, ZONE_NAME));
+        commands.put("set", new SetCommand(zoneService, backupService, serverService, ZONE_NAME));
+        commands.put("reload", new ReloadCommand(zoneService, serverService, ZONE_NAME));
+        commands.put("validate", new ValidateCommand(zoneService, serverService));
+        commands.put("status", new StatusCommand(serverService));
+        commands.put("backup", new BackupCommand(zoneService, backupService));
+    }
+    
+    /**
+     * Print usage information
+     */
+    private static void printUsage() {
+        System.out.println("DNS Manager - Modular CLI");
+        System.out.println("\nUsage: dns <command> [arguments]");
+        System.out.println("\nAvailable commands:");
+        
+        for (Map.Entry<String, Command> entry : commands.entrySet()) {
+            System.out.println("  " + entry.getValue().getUsage());
+        }
+        
+        System.out.println("\nExamples:");
+        System.out.println("  dns list");
+        System.out.println("  dns add www 10.10.10.50");
+        System.out.println("  dns reload");
+        System.out.println("  dns status");
+    }
+    
+    /**
+     * BackupCommand implementation (inner class for convenience)
+     */
+    private static class BackupCommand implements Command {
+        private final ZoneFileService zoneService;
+        private final BackupService backupService;
+        
+        public BackupCommand(ZoneFileService zoneService, BackupService backupService) {
+            this.zoneService = zoneService;
+            this.backupService = backupService;
+        }
+        
+        @Override
+        public void execute(String[] args) throws Exception {
+            Path backup = backupService.createBackup(zoneService.getZoneFile());
+            System.out.println("✓ Backup created: " + backup);
+        }
+        
+        @Override
+        public String getUsage() {
+            return "backup - Create manual backup of zone file";
+        }
+    }
+}

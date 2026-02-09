@@ -1,0 +1,123 @@
+package com.dnsmanager.commands;
+
+import com.dnsmanager.services.*;
+import com.dnsmanager.models.DnsRecord;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Scanner;
+
+public class DeleteCommand implements Command {
+    private final ZoneFileService zoneService;
+    private final BackupService backupService;
+    private final DnsServerService serverService;
+    private final String zoneName;
+    
+    public DeleteCommand(ZoneFileService zoneService, BackupService backupService,
+                        DnsServerService serverService, String zoneName) {
+        this.zoneService = zoneService;
+        this.backupService = backupService;
+        this.serverService = serverService;
+        this.zoneName = zoneName;
+    }
+    
+    @Override
+    public void execute(String[] args) throws Exception {
+        if (args.length < 1) {
+            throw new IllegalArgumentException("Usage: delete <hostname> [--force]");
+        }
+        
+        String hostname = args[0];
+        boolean force = args.length > 1 && args[1].equals("--force");
+        
+        List<DnsRecord> records = zoneService.parseRecords();
+        DnsRecord existingRecord = findRecord(records, hostname);
+        
+        if (existingRecord == null) {
+            System.err.println("❌ Error: Record '" + hostname + "' not found");
+            System.err.println("");
+            System.err.println("Available records:");
+            System.err.println("  Use './dns list' to see all records");
+            throw new IllegalArgumentException("Record not found");
+        }
+        
+        System.out.println("🗑️  Deleting record:");
+        System.out.println("   Hostname: " + hostname);
+        System.out.println("   Type:     " + existingRecord.getType());
+        System.out.println("   Value:    " + existingRecord.getValue());
+        
+        if (!force) {
+            System.out.print("\n⚠️  Are you sure you want to delete this record? [y/N]: ");
+            Scanner scanner = new Scanner(System.in);
+            String response = scanner.nextLine().trim();
+            
+            if (!response.equalsIgnoreCase("y") && !response.equalsIgnoreCase("yes")) {
+                System.out.println("❌ Delete cancelled.");
+                return;
+            }
+        } else {
+            System.out.println("🔄 Forcing delete (--force flag used)");
+        }
+        
+        Path backup = backupService.createBackup(zoneService.getZoneFile());
+        System.out.println("💾 Backup created: " + backup.getFileName());
+        
+        try {
+            long newSerial = zoneService.bumpSerial();
+            System.out.println("🔢 Serial incremented to: " + newSerial);
+            
+            deleteRecord(hostname);
+            System.out.println("✓ Record removed from zone file");
+            
+            System.out.println("\n🔄 Reloading zone...");
+            if (serverService.reloadZone()) {
+                System.out.println("✓ Zone reloaded successfully!");
+                System.out.println("✓ Record deleted: " + hostname + " (" + existingRecord.getType() + " " + existingRecord.getValue() + ")");
+            } else {
+                throw new RuntimeException("Zone reload failed");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error: " + e.getMessage());
+            System.err.println("⏪ Rolling back changes...");
+            backupService.restoreBackup(backup, zoneService.getZoneFile());
+            serverService.reloadZone();
+            throw e;
+        }
+    }
+    
+    private void deleteRecord(String hostname) throws Exception {
+        List<String> lines = zoneService.readLines();
+        List<String> updatedLines = new java.util.ArrayList<>();
+        boolean recordDeleted = false;
+        
+        for (String line : lines) {
+            String trimmedLine = line.trim();
+            
+            if (trimmedLine.startsWith(hostname + "\t") || trimmedLine.startsWith(hostname + " ")) {
+                recordDeleted = true;
+                continue;
+            }
+            
+            updatedLines.add(line);
+        }
+        
+        if (!recordDeleted) {
+            throw new Exception("Failed to delete record from zone file");
+        }
+        
+        zoneService.writeLines(updatedLines);
+    }
+    
+    private DnsRecord findRecord(List<DnsRecord> records, String hostname) {
+        for (DnsRecord record : records) {
+            if (record.getHostname().equals(hostname)) {
+                return record;
+            }
+        }
+        return null;
+    }
+    
+    @Override
+    public String getUsage() {
+        return "delete <hostname> [--force] - Delete a DNS record";
+    }
+}

@@ -1,0 +1,93 @@
+package com.dnsmanager.commands;
+
+import com.dnsmanager.services.*;
+import com.dnsmanager.utils.ValidationUtils;
+import com.dnsmanager.models.DnsRecord;
+import java.nio.file.Path;
+import java.util.List;
+
+public class AddCommand implements Command {
+    private final ZoneFileService zoneService;
+    private final BackupService backupService;
+    private final DnsServerService serverService;
+    private final String zoneName;
+    
+    public AddCommand(ZoneFileService zoneService, BackupService backupService,
+                     DnsServerService serverService, String zoneName) {
+        this.zoneService = zoneService;
+        this.backupService = backupService;
+        this.serverService = serverService;
+        this.zoneName = zoneName;
+    }
+    
+    @Override
+    public void execute(String[] args) throws Exception {
+        if (args.length < 2) {
+            throw new IllegalArgumentException("Usage: add <hostname> <ip>");
+        }
+        
+        String hostname = args[0];
+        String ip = args[1];
+        
+        if (!ValidationUtils.isValidHostname(hostname)) {
+            throw new IllegalArgumentException("Invalid hostname: " + hostname);
+        }
+        
+        if (!ValidationUtils.isValidIPv4(ip)) {
+            throw new IllegalArgumentException("Invalid IP address: " + ip);
+        }
+        
+        List<DnsRecord> records = zoneService.parseRecords();
+        DnsRecord existingRecord = findRecord(records, hostname);
+        
+        if (existingRecord != null) {
+            System.err.println("❌ Error: Record '" + hostname + "' already exists");
+            System.err.println("   Current value: " + existingRecord.getValue());
+            System.err.println("");
+            System.err.println("To update existing record, use:");
+            System.err.println("  ./dns update " + hostname + " " + ip);
+            System.err.println("Or to add/update:");
+            System.err.println("  ./dns set " + hostname + " " + ip);
+            throw new IllegalArgumentException("Record already exists. Use 'update' or 'set' command.");
+        }
+        
+        System.out.println("➕ Adding new record: " + hostname + " -> " + ip);
+        
+        Path backup = backupService.createBackup(zoneService.getZoneFile());
+        System.out.println("💾 Backup created: " + backup.getFileName());
+        
+        try {
+            long newSerial = zoneService.bumpSerial();
+            System.out.println("🔢 Serial incremented to: " + newSerial);
+            
+            zoneService.addOrUpdateRecord(hostname, "A", ip);
+            System.out.println("✓ Record saved to zone file");
+            
+            System.out.println("\n🔄 Reloading zone...");
+            if (serverService.reloadZone()) {
+                System.out.println("✓ Zone reloaded successfully!");
+                System.out.println("✓ Record added: " + hostname + " → " + ip);
+            } else {
+                throw new RuntimeException("Zone reload failed");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error: " + e.getMessage());
+            System.err.println("⏪ Rolling back changes...");
+            backupService.restoreBackup(backup, zoneService.getZoneFile());
+            serverService.reloadZone();
+            throw e;
+        }
+    }
+    
+    private DnsRecord findRecord(List<DnsRecord> records, String hostname) {
+        for (DnsRecord record : records) {
+            if (record.getHostname().equals(hostname)) return record;
+        }
+        return null;
+    }
+    
+    @Override
+    public String getUsage() {
+        return "add <hostname> <ip> - Add a new DNS A record (fails if exists)";
+    }
+}

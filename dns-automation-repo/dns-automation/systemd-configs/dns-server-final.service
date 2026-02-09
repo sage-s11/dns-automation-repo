@@ -1,0 +1,58 @@
+[Unit]
+Description=DNS Management - BIND9 DNS Server
+Documentation=https://github.com/yourusername/dns-automation
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=sage-s
+Group=sage-s
+WorkingDirectory=/home/sage-s/projects/dns-automation
+
+# Remove old container if exists
+ExecStartPre=-/usr/bin/podman rm -f bind9-demo
+
+# Create required directories
+ExecStartPre=/bin/mkdir -p /home/sage-s/projects/dns-automation/cache/bind
+ExecStartPre=/bin/mkdir -p /home/sage-s/projects/dns-automation/run/named
+ExecStartPre=/bin/mkdir -p /home/sage-s/projects/dns-automation/logs/bind
+
+# Start container in detached mode with restart policy
+ExecStart=/usr/bin/podman run -d \
+    --name bind9-demo \
+    --restart=always \
+    -p 0.0.0.0:1053:53/udp \
+    -p 0.0.0.0:1053:53/tcp \
+    -p 127.0.0.1:1953:1953/tcp \
+    -v /home/sage-s/projects/dns-automation/config/named.conf:/etc/bind/named.conf:Z \
+    -v /home/sage-s/projects/dns-automation/config/rndc/rndc.key:/etc/bind/rndc.key:Z \
+    -v /home/sage-s/projects/dns-automation/zones:/zones:Z \
+    -v /home/sage-s/projects/dns-automation/cache/bind:/var/cache/bind:Z \
+    -v /home/sage-s/projects/dns-automation/run/named:/run/named:Z \
+    -v /home/sage-s/projects/dns-automation/logs/bind:/var/log/bind:Z \
+    docker.io/internetsystemsconsortium/bind9:9.18
+
+# Wait for container to be ready
+ExecStartPost=/bin/sleep 3
+
+# Verify container is running
+ExecStartPost=/bin/sh -c 'podman ps | grep bind9-demo || exit 1'
+
+# Stop container on service stop
+ExecStop=/usr/bin/podman stop -t 10 bind9-demo
+ExecStopPost=/usr/bin/podman rm -f bind9-demo
+
+# Security
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dns-server
+
+[Install]
+# To enable auto-start on boot: sudo systemctl enable dns-server
+WantedBy=multi-user.target

@@ -1,0 +1,72 @@
+package com.dnsmanager.commands;
+
+import com.dnsmanager.services.*;
+import com.dnsmanager.utils.ValidationUtils;
+import java.nio.file.Path;
+
+public class AddCommand implements Command {
+    private final ZoneFileService zoneService;
+    private final BackupService backupService;
+    private final DnsServerService serverService;
+    private final String zoneName;
+    
+    public AddCommand(ZoneFileService zoneService, 
+                     BackupService backupService,
+                     DnsServerService serverService,
+                     String zoneName) {
+        this.zoneService = zoneService;
+        this.backupService = backupService;
+        this.serverService = serverService;
+        this.zoneName = zoneName;
+    }
+    
+    @Override
+    public void execute(String[] args) throws Exception {
+        if (args.length < 2) {
+            throw new IllegalArgumentException("Usage: add <hostname> <ip>");
+        }
+        
+        String hostname = args[0];
+        String ip = args[1];
+        
+        if (!ValidationUtils.isValidHostname(hostname)) {
+            throw new IllegalArgumentException("Invalid hostname: " + hostname);
+        }
+        
+        if (!ValidationUtils.isValidIPv4(ip)) {
+            throw new IllegalArgumentException("Invalid IP address: " + ip);
+        }
+        
+        System.out.println("Adding record: " + hostname + " -> " + ip);
+        
+        Path backup = backupService.createBackup(zoneService.getZoneFile());
+        System.out.println("Backup created: " + backup.getFileName());
+        
+        try {
+            long newSerial = zoneService.bumpSerial();
+            System.out.println("Serial incremented to: " + newSerial);
+            
+            zoneService.addOrUpdateRecord(hostname, "A", ip);
+            System.out.println("✓ Record saved to zone file");
+            
+            System.out.println("\nReloading zone...");
+            if (serverService.reloadZone()) {
+                System.out.println("✓ Zone reloaded successfully!");
+            } else {
+                throw new RuntimeException("Zone reload failed");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            System.err.println("Rolling back changes...");
+            backupService.restoreBackup(backup, zoneService.getZoneFile());
+            serverService.reloadZone();
+            throw e;
+        }
+    }
+    
+    @Override
+    public String getUsage() {
+        return "add <hostname> <ip> - Add or update a DNS A record";
+    }
+}
