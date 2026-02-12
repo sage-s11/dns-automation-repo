@@ -1,0 +1,25 @@
+# Compiled files
+*.class
+*.jar
+
+# Output files
+outputs/
+*.csv
+*-REPORT.txt
+
+# Backup files
+*.backup
+*.save
+*.old
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
