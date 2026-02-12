@@ -3,6 +3,8 @@ package com.dnsmanager.services;
 /**
  * Deterministic DNS validation following RFC 952/1123
  * No AI - pure rules-based validation
+ * 
+ * Now supports: A, CNAME, MX, TXT records
  */
 public class RuleBasedValidator {
     
@@ -71,11 +73,14 @@ public class RuleBasedValidator {
             return ValidationResult.invalid("IP address cannot be empty");
         }
         
-        if (!ip.matches("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")) {
+        // Remove CIDR notation if present
+        String cleanIP = ip.split("/")[0];
+        
+        if (!cleanIP.matches("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$")) {
             return ValidationResult.invalid("Invalid IP format");
         }
         
-        String[] octets = ip.split("\\.");
+        String[] octets = cleanIP.split("\\.");
         
         if (octets.length != 4) {
             return ValidationResult.invalid("IPv4 must have 4 octets");
@@ -95,18 +100,110 @@ public class RuleBasedValidator {
         return ValidationResult.valid();
     }
     
+    /**
+     * Validate record - backward compatible (no priority)
+     */
     public ValidationResult validateRecord(String hostname, String value, String type) {
-        ValidationResult hostnameResult = validateHostname(hostname);
-        if (!hostnameResult.isValid) {
-            return hostnameResult;
+        return validateRecord(hostname, value, type, null);
+    }
+    
+    /**
+     * Validate record with priority support
+     */
+    public ValidationResult validateRecord(String hostname, String value, String type, Integer priority) {
+        // Allow @ for zone apex
+        if (!hostname.equals("@") && !hostname.equals("*")) {
+            ValidationResult hostnameResult = validateHostname(hostname);
+            if (!hostnameResult.isValid) {
+                return hostnameResult;
+            }
         }
         
         type = type.toUpperCase();
         
-        if (type.equals("A")) {
-            return validateIPv4(value);
+        switch (type) {
+            case "A":
+                return validateIPv4(value);
+            
+            case "CNAME":
+                return validateCNAME(hostname, value);
+            
+            case "MX":
+                return validateMX(hostname, value, priority);
+            
+            case "TXT":
+                return validateTXT(hostname, value);
+            
+            default:
+                return ValidationResult.valid();
+        }
+    }
+    
+    /**
+     * Validate CNAME record
+     */
+    private ValidationResult validateCNAME(String hostname, String target) {
+        // Validate target hostname
+        if (!target.equals("@")) {
+            ValidationResult targetResult = validateHostname(target);
+            if (!targetResult.isValid) {
+                return ValidationResult.invalid("Invalid CNAME target: " + targetResult.reason);
+            }
         }
         
+        // Check for self-reference
+        if (hostname.equalsIgnoreCase(target)) {
+            return ValidationResult.invalid("CNAME cannot point to itself");
+        }
+        
+        // Zone apex CNAME is not recommended but we'll allow it
+        if (hostname.equals("@")) {
+            // Some DNS servers support this, so just validate the target
+        }
+        
+        return ValidationResult.valid();
+    }
+    
+    /**
+     * Validate MX record
+     */
+    private ValidationResult validateMX(String hostname, String mailServer, Integer priority) {
+        // Priority is required for MX
+        if (priority == null) {
+            return ValidationResult.invalid("MX records require a priority value");
+        }
+        
+        // Validate priority range (RFC 5321)
+        if (priority < 0 || priority > 65535) {
+            return ValidationResult.invalid("MX priority must be between 0 and 65535");
+        }
+        
+        // Validate mail server target
+        if (!mailServer.equals("@")) {
+            ValidationResult targetResult = validateHostname(mailServer);
+            if (!targetResult.isValid) {
+                return ValidationResult.invalid("Invalid mail server hostname: " + targetResult.reason);
+            }
+        }
+        
+        return ValidationResult.valid();
+    }
+    
+    /**
+     * Validate TXT record
+     */
+    private ValidationResult validateTXT(String hostname, String text) {
+        // TXT value is required
+        if (text == null) {
+            return ValidationResult.invalid("TXT value cannot be null");
+        }
+        
+        // Check length (DNS TXT record limit)
+        if (text.length() > 65535) {
+            return ValidationResult.invalid("TXT record exceeds maximum length (65535 characters)");
+        }
+        
+        // TXT records can contain any text, including empty strings
         return ValidationResult.valid();
     }
 }

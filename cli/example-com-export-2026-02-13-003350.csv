@@ -1,0 +1,11 @@
+hostname,ip,type,zone,ttl,status,risk_level,notes,priority
+blog,web-02.example.com,CNAME,example.com,3600,N/A,LOW,Non-A record
+cache-01,10.20.3.1,A,example.com,3600,INACTIVE,SAFE,No response
+db-01,10.20.2.1,A,example.com,3600,INACTIVE,SAFE,No response
+ftp,web-01.example.com,CNAME,example.com,3600,N/A,LOW,Non-A record
+google-verify,google-site-verification=abc123xyz,TXT,example.com,3600,N/A,LOW,Non-A record
+mail,mail.example.com,MX,example.com,3600,N/A,LOW,Non-A record,10
+spf-record,v=spf1 mx ~all,TXT,example.com,3600,N/A,LOW,Non-A record
+web-01,10.20.1.1,A,example.com,3600,INACTIVE,SAFE,No response
+web-02,10.20.1.2,A,example.com,3600,INACTIVE,SAFE,No response
+www,web-01.example.com,CNAME,example.com,3600,N/A,LOW,Non-A record
