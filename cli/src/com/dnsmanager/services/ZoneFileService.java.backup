@@ -1,0 +1,137 @@
+package com.dnsmanager.services;
+
+import com.dnsmanager.models.DnsRecord;
+import java.io.IOException;
+import java.nio.file.*;
+import java.util.*;
+
+/**
+ * Service for reading and writing DNS zone files
+ */
+public class ZoneFileService {
+    private final Path zoneFile;
+    
+    public ZoneFileService(Path zoneFile) {
+        this.zoneFile = zoneFile;
+    }
+    
+    /**
+     * Read all lines from the zone file
+     */
+    public List<String> readLines() throws IOException {
+        return Files.readAllLines(zoneFile);
+    }
+    
+    /**
+     * Parse DNS records from the zone file
+     */
+    public List<DnsRecord> parseRecords() throws IOException {
+        List<DnsRecord> records = new ArrayList<>();
+        List<String> lines = readLines();
+        boolean inRecords = false;
+        
+        for (String line : lines) {
+            line = line.trim();
+            
+            // Skip until after SOA closing parenthesis
+            if (line.contains(")") && !inRecords) {
+                inRecords = true;
+                continue;
+            }
+            
+            // Parse record lines
+            if (inRecords && !line.isEmpty() && !line.startsWith(";")) {
+                String[] parts = line.split("\\s+");
+                if (parts.length >= 4) {
+                    String hostname = parts[0];
+                    String recordClass = parts[1]; // IN
+                    String type = parts[2];         // A, NS, etc.
+                    String value = parts[3];        // IP or domain
+                    
+                    records.add(new DnsRecord(hostname, type, value));
+                }
+            }
+        }
+        
+        return records;
+    }
+    
+    /**
+     * Add or update a DNS record
+     */
+    public void addOrUpdateRecord(String hostname, String type, String value) throws IOException {
+        List<String> lines = new ArrayList<>(readLines());
+        boolean recordUpdated = false;
+        
+        // Try to update existing record
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i).trim();
+            if (line.startsWith(hostname + "\t") || line.startsWith(hostname + " ")) {
+                lines.set(i, String.format("%s\tIN\t%s\t%s", hostname, type, value));
+                recordUpdated = true;
+                break;
+            }
+        }
+        
+        // Add new record if not found
+        if (!recordUpdated) {
+            for (int i = 0; i < lines.size(); i++) {
+                if (lines.get(i).contains(")")) {
+                    lines.add(i + 1, String.format("%s\tIN\t%s\t%s", hostname, type, value));
+                    break;
+                }
+            }
+        }
+        
+        writeLines(lines);
+    }
+    
+    /**
+     * Increment the serial number in the zone file
+     */
+    public long bumpSerial() throws IOException {
+        List<String> lines = new ArrayList<>(readLines());
+        long newSerial = 0;
+        
+        for (int i = 0; i < lines.size(); i++) {
+            String line = lines.get(i);
+            if (line.contains("Serial")) {
+                String serialStr = line.replaceAll("\\D", "");
+                long currentSerial = Long.parseLong(serialStr);
+                newSerial = currentSerial + 1;
+                lines.set(i, line.replaceAll("\\d+", String.valueOf(newSerial)));
+                break;
+            }
+        }
+        
+        writeLines(lines);
+        return newSerial;
+    }
+    
+    /**
+     * Write lines to the zone file atomically
+     */
+    public void writeLines(List<String> lines) throws IOException {
+        Path tempFile = Files.createTempFile("zone", ".tmp");
+        Files.write(tempFile, lines);
+        Files.move(tempFile, zoneFile, StandardCopyOption.REPLACE_EXISTING);
+    }
+    
+    /**
+     * Get the current serial number
+     */
+    public long getCurrentSerial() throws IOException {
+        List<String> lines = readLines();
+        for (String line : lines) {
+            if (line.contains("Serial")) {
+                String serialStr = line.replaceAll("\\D", "");
+                return Long.parseLong(serialStr);
+            }
+        }
+        return 0;
+    }
+    
+    public Path getZoneFile() {
+        return zoneFile;
+    }
+}
