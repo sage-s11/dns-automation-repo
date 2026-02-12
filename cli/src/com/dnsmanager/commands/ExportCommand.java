@@ -42,7 +42,6 @@ public class ExportCommand {
             String pattern = null;
             String outputFile = null;
             boolean exportAll = false;
-            boolean quickMode = false;
             boolean splitFiles = false;
             
             for (int i = 0; i < args.length; i++) {
@@ -58,9 +57,6 @@ public class ExportCommand {
                         break;
                     case "--all":
                         exportAll = true;
-                        break;
-                    case "--quick":
-                        quickMode = true;
                         break;
                     case "--split":
                         splitFiles = true;
@@ -98,11 +94,7 @@ public class ExportCommand {
             exportService = new ExportService();
             
             // Display mode
-            if (quickMode) {
-                System.out.println("Mode: QUICK (no validation)");
-            } else {
-                System.out.println("Mode: SMART (with network analysis)");
-            }
+            System.out.println("Mode: SMART EXPORT (with network analysis)");
             if (splitFiles) {
                 System.out.println("Output: SPLIT (categorized files)");
             }
@@ -111,11 +103,11 @@ public class ExportCommand {
             // Execute export
             ExportResult result;
             if (zone != null) {
-                result = exportByZone(zone, outputFile, quickMode, splitFiles);
+                result = exportByZone(zone, outputFile, splitFiles);
             } else if (pattern != null) {
-                result = exportByPattern(pattern, outputFile, quickMode, splitFiles);
+                result = exportByPattern(pattern, outputFile, splitFiles);
             } else {
-                result = exportAll(outputFile, quickMode, splitFiles);
+                result = exportAll(outputFile, splitFiles);
             }
             
             // Print summary
@@ -139,30 +131,29 @@ public class ExportCommand {
      * Export by zone
      */
     private static ExportResult exportByZone(String zoneName, String outputFile, 
-                                             boolean quickMode, boolean splitFiles) 
+                                             boolean splitFiles) 
             throws Exception {
         System.out.println("🔍 Exporting zone: " + zoneName);
-        return exportService.exportZone(zoneName, outputFile, quickMode, splitFiles);
+        return exportService.exportZone(zoneName, outputFile, splitFiles);
     }
     
     /**
      * Export by pattern
      */
     private static ExportResult exportByPattern(String pattern, String outputFile,
-                                                boolean quickMode, boolean splitFiles) 
+                                                boolean splitFiles) 
             throws Exception {
         System.out.println("🔍 Exporting records matching pattern: " + pattern);
-        return exportService.exportByPattern(pattern, outputFile, quickMode, splitFiles);
+        return exportService.exportByPattern(pattern, outputFile, splitFiles);
     }
     
     /**
      * Export all records
      */
-    private static ExportResult exportAll(String outputFile, boolean quickMode, 
-                                          boolean splitFiles) 
+    private static ExportResult exportAll(String outputFile, boolean splitFiles) 
             throws Exception {
         System.out.println("🔍 Exporting all DNS records");
-        return exportService.exportAll(outputFile, quickMode, splitFiles);
+        return exportService.exportAll(outputFile, splitFiles);
     }
     
     /**
@@ -174,7 +165,7 @@ public class ExportCommand {
         System.out.println("======================================================================");
         System.out.println("Total records exported: " + result.totalRecords);
         
-        if (!result.quickMode && result.totalRecords > 0) {
+        if (result.totalRecords > 0) {
             System.out.println();
             
             // Active records
@@ -242,11 +233,9 @@ public class ExportCommand {
         
         System.out.println("======================================================================");
         
-        if (!result.quickMode) {
-            System.out.println("\n⏱️  Total time: " + result.totalTimeSeconds + "s");
-            System.out.println("   Analysis: " + result.analysisTimeSeconds + "s");
-            System.out.println("   Export: " + result.exportTimeSeconds + "s");
-        }
+        System.out.println("\n⏱️  Total time: " + result.totalTimeSeconds + "s");
+        System.out.println("   Analysis: " + result.analysisTimeSeconds + "s");
+        System.out.println("   Export: " + result.exportTimeSeconds + "s");
     }
     
     /**

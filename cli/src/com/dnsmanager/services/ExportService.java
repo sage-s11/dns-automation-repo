@@ -33,7 +33,7 @@ public class ExportService extends DatabaseService {
      * Export zone with analysis
      */
     public ExportResult exportZone(String zoneName, String outputFile, 
-                                   boolean quickMode, boolean splitFiles) throws Exception {
+                                   boolean splitFiles) throws Exception {
         String sql = "SELECT dr.id, dr.hostname, dr.type, dr.value, dr.ttl, " +
                      "       dr.priority, dr.created_at, z.name as zone " +
                      "FROM dns_records dr " +
@@ -45,7 +45,7 @@ public class ExportService extends DatabaseService {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setString(1, zoneName);
-            return executeExport(stmt, outputFile, quickMode, splitFiles);
+            return executeExport(stmt, outputFile, splitFiles);
         }
     }
     
@@ -53,7 +53,7 @@ public class ExportService extends DatabaseService {
      * Export by pattern
      */
     public ExportResult exportByPattern(String pattern, String outputFile,
-                                       boolean quickMode, boolean splitFiles) throws Exception {
+                                       boolean splitFiles) throws Exception {
         String sqlPattern = pattern.replace("*", "%");
         String sql = "SELECT dr.id, dr.hostname, dr.type, dr.value, dr.ttl, " +
                      "       dr.priority, dr.created_at, z.name as zone " +
@@ -66,15 +66,14 @@ public class ExportService extends DatabaseService {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setString(1, sqlPattern);
-            return executeExport(stmt, outputFile, quickMode, splitFiles);
+            return executeExport(stmt, outputFile, splitFiles);
         }
     }
     
     /**
      * Export all records
      */
-    public ExportResult exportAll(String outputFile, boolean quickMode, 
-                                  boolean splitFiles) throws Exception {
+    public ExportResult exportAll(String outputFile, boolean splitFiles) throws Exception {
         String sql = "SELECT dr.id, dr.hostname, dr.type, dr.value, dr.ttl, " +
                      "       dr.priority, dr.created_at, z.name as zone " +
                      "FROM dns_records dr " +
@@ -84,7 +83,7 @@ public class ExportService extends DatabaseService {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
             
-            return executeExport(stmt.executeQuery(sql), outputFile, quickMode, splitFiles);
+            return executeExport(stmt.executeQuery(sql), outputFile, splitFiles);
         }
     }
     
@@ -92,9 +91,9 @@ public class ExportService extends DatabaseService {
      * Execute export with analysis
      */
     private ExportResult executeExport(PreparedStatement stmt, String outputFile,
-                                      boolean quickMode, boolean splitFiles) throws Exception {
+                                      boolean splitFiles) throws Exception {
         try (ResultSet rs = stmt.executeQuery()) {
-            return executeExport(rs, outputFile, quickMode, splitFiles);
+            return executeExport(rs, outputFile, splitFiles);
         }
     }
     
@@ -102,12 +101,11 @@ public class ExportService extends DatabaseService {
      * Core export logic
      */
     private ExportResult executeExport(ResultSet rs, String outputFile,
-                                      boolean quickMode, boolean splitFiles) throws Exception {
+                                      boolean splitFiles) throws Exception {
         long startTime = System.currentTimeMillis();
         
         ExportResult result = new ExportResult();
         result.outputFile = outputFile;
-        result.quickMode = quickMode;
         result.splitFiles = splitFiles;
         
         // Read records from database
@@ -134,15 +132,13 @@ public class ExportService extends DatabaseService {
         
         System.out.println("📋 Found " + records.size() + " record(s)");
         
-        // Analyze records if not quick mode
-        if (!quickMode) {
-            System.out.println("\n🔍 Analyzing network status... (this may take a few seconds)");
-            long analysisStart = System.currentTimeMillis();
-            
-            analyzeRecords(records, result);
-            
-            result.analysisTimeSeconds = (System.currentTimeMillis() - analysisStart) / 1000.0;
-        }
+        // Always analyze records (smart export)
+        System.out.println("\n🔍 Analyzing network status... (this may take a few seconds)");
+        long analysisStart = System.currentTimeMillis();
+        
+        analyzeRecords(records, result);
+        
+        result.analysisTimeSeconds = (System.currentTimeMillis() - analysisStart) / 1000.0;
         
         // Write export files
         long exportStart = System.currentTimeMillis();
@@ -240,12 +236,8 @@ public class ExportService extends DatabaseService {
      */
     private void writeSingleFile(List<ExportRecord> records, ExportResult result) throws Exception {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(result.outputFile))) {
-            // Write header
-            if (result.quickMode) {
-                writer.write("hostname,ip,type,zone,ttl");
-            } else {
-                writer.write("hostname,ip,type,zone,ttl,status,risk_level,notes");
-            }
+            // Write header - always include status columns
+            writer.write("hostname,ip,type,zone,ttl,status,risk_level,notes");
             if (records.stream().anyMatch(r -> r.priority != null)) {
                 writer.write(",priority");
             }
@@ -257,13 +249,10 @@ public class ExportService extends DatabaseService {
                 writer.write(escapeCsv(record.ip) + ",");
                 writer.write(record.type + ",");
                 writer.write(escapeCsv(record.zone) + ",");
-                writer.write(String.valueOf(record.ttl));
-                
-                if (!result.quickMode) {
-                    writer.write("," + record.status);
-                    writer.write("," + record.riskLevel);
-                    writer.write("," + escapeCsv(record.notes));
-                }
+                writer.write(String.valueOf(record.ttl) + ",");
+                writer.write(record.status + ",");
+                writer.write(record.riskLevel + ",");
+                writer.write(escapeCsv(record.notes));
                 
                 if (record.priority != null) {
                     writer.write("," + record.priority);
@@ -480,7 +469,6 @@ public class ExportService extends DatabaseService {
      */
     public static class ExportResult {
         public String outputFile;
-        public boolean quickMode;
         public boolean splitFiles;
         
         public int totalRecords;
