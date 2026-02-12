@@ -1,0 +1,8 @@
+hostname,ip,type,zone,ttl
+export-api-01,10.10.30.40/32,A,prod.local,3600
+export-cache-01,10.10.30.20/32,A,prod.local,3600
+export-db-01,10.10.30.10/32,A,prod.local,3600
+export-db-02,10.10.30.11/32,A,prod.local,3600
+export-web-01,10.10.30.1/32,A,prod.local,3600
+export-web-02,10.10.30.2/32,A,prod.local,3600
+export-web-03,10.10.30.3/32,A,prod.local,3600

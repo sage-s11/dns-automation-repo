@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="lib">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/dns-automation-repo/dns-automation/cli/lib/json-20231013.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dns-automation-repo/dns-automation/cli/lib/slf4j-api-2.0.9.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dns-automation-repo/dns-automation/cli/lib/slf4j-simple-2.0.9.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dns-automation-repo/dns-automation/cli/lib/HikariCP-5.1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/dns-automation-repo/dns-automation/cli/lib/postgresql-42.7.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

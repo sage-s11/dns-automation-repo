@@ -1,0 +1,20 @@
+======================================================================
+DNS EXPORT ANALYSIS REPORT
+======================================================================
+Generated: 2026-02-12 23:41:09
+Total records: 7
+
+SUMMARY:
+  Active records:   0 (devices responding)
+  Inactive records: 7 (no response)
+  Stale records:    0 (>1 year old, inactive)
+
+RECOMMENDATIONS:
+----------------------------------------------------------------------
+
+FILES CREATED:
+  Main export:    split-export.csv
+  Active:         split-export-active.csv
+  Inactive:       split-export-inactive.csv
+  This report:    split-export-REPORT.txt
+======================================================================
