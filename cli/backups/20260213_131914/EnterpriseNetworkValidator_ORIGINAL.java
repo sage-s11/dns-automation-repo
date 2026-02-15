@@ -16,7 +16,7 @@ import java.util.concurrent.*;
  * 
  * Expected Performance: 8.5s → 4-5s for 30 IPs (40-50% faster)
  */
-public class EnterpriseNetworkValidator_ORIGINAL {
+public class EnterpriseNetworkValidator {
     
     // ============================================================================
     // OPTIMIZED CONFIGURATION
