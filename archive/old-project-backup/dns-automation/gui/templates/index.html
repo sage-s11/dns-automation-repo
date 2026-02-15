@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNS Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+        }
+        
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        
+        .btn-success:hover {
+            background: #38a169;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: #f7fafc;
+        }
+        
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        tr:hover {
+            background: #f7fafc;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+        
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h3 {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card p {
+            color: #333;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🌐 DNS Management Dashboard</h1>
+            <p>Manage your DNS records with ease</p>
+        </div>
+        
+        <!-- Alerts -->
+        <div id="alert-success" class="alert alert-success"></div>
+        <div id="alert-error" class="alert alert-error"></div>
+        
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Records</h3>
+                <p id="total-records">{{ records|length }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>A Records</h3>
+                <p id="a-records">{{ records|selectattr('type', 'equalto', 'A')|list|length }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>NS Records</h3>
+                <p id="ns-records">{{ records|selectattr('type', 'equalto', 'NS')|list|length }}</p>
+            </div>
+        </div>
+        
+        <!-- Add Record Form -->
+        <div class="card">
+            <h2>➕ Add New Record</h2>
+            <form id="add-form">
+                <div class="form-group">
+                    <label for="hostname">Hostname</label>
+                    <input type="text" id="hostname" name="hostname" placeholder="e.g., mail, www, api" required>
+                </div>
+                <div class="form-group">
+                    <label for="ip">IP Address</label>
+                    <input type="text" id="ip" name="ip" placeholder="e.g., 10.10.10.50" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Record</button>
+            </form>
+        </div>
+        
+        <!-- Records Table -->
+        <div class="card">
+            <h2>📋 DNS Records</h2>
+            <div id="records-container">
+                {% if records %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Hostname</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="records-table">
+                        {% for record in records %}
+                        <tr data-hostname="{{ record.hostname }}">
+                            <td><strong>{{ record.hostname }}</strong></td>
+                            <td>{{ record.type }}</td>
+                            <td><code>{{ record.value }}</code></td>
+                            <td>
+                                <button class="btn btn-danger" onclick="deleteRecord('{{ record.hostname }}')">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <h3>No records found</h3>
+                    <p>Add your first DNS record above!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Show alert message
+        function showAlert(message, type) {
+            const alertId = type === 'success' ? 'alert-success' : 'alert-error';
+            const alertEl = document.getElementById(alertId);
+            alertEl.textContent = message;
+            alertEl.style.display = 'block';
+            
+            setTimeout(() => {
+                alertEl.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Add record
+        document.getElementById('add-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const hostname = document.getElementById('hostname').value;
+            const ip = document.getElementById('ip').value;
+            
+            try {
+                const response = await fetch('/api/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ hostname, ip })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(`✓ Record ${hostname} added successfully!`, 'success');
+                    document.getElementById('add-form').reset();
+                    
+                    // Reload page after 1 second
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showAlert(`✗ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`✗ Error: ${error.message}`, 'error');
+            }
+        });
+        
+        // Delete record
+        async function deleteRecord(hostname) {
+            if (!confirm(`Are you sure you want to delete "${hostname}"?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ hostname })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(`✓ Record ${hostname} deleted successfully!`, 'success');
+                    
+                    // Remove row from table
+                    const row = document.querySelector(`tr[data-hostname="${hostname}"]`);
+                    if (row) {
+                        row.remove();
+                    }
+                    
+                    // Reload page after 1 second to update stats
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showAlert(`✗ Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`✗ Error: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

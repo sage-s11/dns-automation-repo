@@ -1,0 +1,17 @@
+$TTL 86400
+@   IN  SOA ns1.testzone2.local. admin.testzone2.local. (
+        2026020701 ; Serial
+        3600       ; Refresh
+        1800       ; Retry
+        604800     ; Expire
+        86400 )    ; Minimum
+
+; Nameserver record
+@   IN  NS  ns1.testzone2.local.
+
+; Nameserver A record
+ns1	IN	A	192.168.1.17
+
+; Additional A records
+; Add your records below
+

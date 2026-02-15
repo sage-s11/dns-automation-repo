@@ -1,5 +1,6 @@
 package com.dnsmanager.services;
 
+
 import com.dnsmanager.config.DatabaseConfig;
 
 import java.io.BufferedReader;

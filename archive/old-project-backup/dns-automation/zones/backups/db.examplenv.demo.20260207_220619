@@ -1,0 +1,27 @@
+$TTL 86400
+@   IN  SOA ns1.examplenv.demo. admin.examplenv.demo. (
+        2026020602 ; Serial
+        3600       ; Refresh
+        1800       ; Retry
+        604800     ; Expire
+        86400 )    ; Minimum
+tarmc-testing2	IN	A	10.10.10.119
+final-test	IN	A	10.10.10.88
+test123	IN	A	10.10.10.99
+gui-test	IN	A	10.10.10.199
+testing2-mobile	IN	A	10.10.10.122
+newhost	IN	A	10.10.10.200
+database	IN	A	10.10.10.100
+staging	IN	A	10.10.10.75
+mail	IN	A	10.10.10.110
+modular-test	IN	A	10.10.10.200
+
+db	IN	A	10.10.10.200
+
+test	IN	A	10.10.10.99
+
+@   IN  NS  ns1.examplenv.demo.
+
+ns1	IN	A	192.168.1.17
+www IN  A   10.10.10.10
+api IN A 10.10.10.20
