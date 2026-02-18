@@ -70,13 +70,6 @@ public class RuleBasedValidator {
     
     public ValidationResult validateIPv4(String ip) {
         if (ip == null || ip.isEmpty()) {
-            return new ValidationResult(false, "IP address cannot be null or empty");
-        }
-        
-        // Strip CIDR notation if present
-        if (ip.contains("/")) {
-            ip = ip.split("/")[0];
-        }
             return ValidationResult.invalid("IP address cannot be empty");
         }
         
