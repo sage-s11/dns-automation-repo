@@ -7,12 +7,11 @@
 set -euo pipefail
 
 # Configuration
-PHONE_IP="192.168.1.10"
+PHONE_IP="192.168.1.38"
 PHONE_PORT="8022"
-SSH_KEY="$HOME/.ssh/android_backup"
 PHONE_BACKUP_DIR="dns-backups"
 LOCAL_BACKUP_DIR="$HOME/dns-backups-local"
-PROJECT_DIR="$HOME/projects/dns-automation"
+PROJECT_DIR="$HOME/projects/dns/dns-automation-repo"
 
 # Retention policies (number of backups to keep)
 DAILY_RETENTION=7      # Keep 7 daily backups
@@ -122,7 +121,7 @@ log_info "Backup created: ${BACKUP_SIZE}"
 # Transfer to phone
 log_info "Transferring to Android phone (${PHONE_IP})..."
 
-if scp -i "$SSH_KEY" -P "$PHONE_PORT" "$LOCAL_BACKUP_PATH" "${PHONE_IP}:${PHONE_BACKUP_DIR}/" 2>/dev/null; then
+if scp -i "$#SSH_KEY" -P "$PHONE_PORT" "$LOCAL_BACKUP_PATH" "u0_a254@${PHONE_IP}:${PHONE_BACKUP_DIR}/" 2>/dev/null; then
     log_info "✅ Backup transferred successfully!"
 else
     log_error "Failed to transfer backup to phone"
@@ -131,7 +130,7 @@ fi
 
 # Rotate old backups on phone
 log_info "Rotating old ${BACKUP_TYPE} backups on phone (keeping last ${RETENTION})..."
-ssh -i "$SSH_KEY" -p "$PHONE_PORT" "$PHONE_IP" \
+ssh -i "$#SSH_KEY" -p "$PHONE_PORT" "u0_a254@$PHONE_IP" \
     "cd ${PHONE_BACKUP_DIR} && ls -t dns-backup-${BACKUP_TYPE}-*.tar.gz 2>/dev/null | tail -n +$((RETENTION + 1)) | xargs -r rm" \
     2>/dev/null || log_warn "No old backups to rotate"
 
@@ -150,7 +149,7 @@ echo "  Remote:   ${PHONE_IP}:${PHONE_BACKUP_DIR}/${BACKUP_NAME}"
 
 # Show remaining backups on phone
 log_info "📱 Backups on phone:"
-ssh -i "$SSH_KEY" -p "$PHONE_PORT" "$PHONE_IP" \
+ssh -i "$#SSH_KEY" -p "$PHONE_PORT" "u0_a254@$PHONE_IP" \
     "ls -lht ${PHONE_BACKUP_DIR}/ 2>/dev/null | head -10" || log_warn "Could not list phone backups"
 
 # Show local backups

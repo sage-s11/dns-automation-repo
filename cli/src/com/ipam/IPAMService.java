@@ -78,7 +78,7 @@ public class IPAMService extends DatabaseService {
         Set<String> usedIPs = new HashSet<>();
         Subnet subnet = new Subnet(cidr);
         
-        String sql = "SELECT DISTINCT value FROM dns_records WHERE type = 'A'";
+        String sql = "SELECT DISTINCT value FROM dns_records WHERE type = 'A';";
         
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();
@@ -87,7 +87,7 @@ public class IPAMService extends DatabaseService {
             while (rs.next()) {
                 String ip = rs.getString("value");
                 
-                // Remove CIDR notation if present
+                // Strip CIDR notation if present (e.g., 10.10.10.1/32)
                 if (ip.contains("/")) {
                     ip = ip.split("/")[0];
                 }
@@ -100,6 +100,7 @@ public class IPAMService extends DatabaseService {
         }
         
         return usedIPs;
+    }
     }
     
     /**

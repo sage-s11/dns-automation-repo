@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # Configuration
-PHONE_IP="192.168.1.10"
+PHONE_IP="192.168.1.38"
 PHONE_PORT="8022"
 SSH_KEY="$HOME/.ssh/android_backup"
 PHONE_BACKUP_DIR="dns-backups"
