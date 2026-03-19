@@ -243,42 +243,6 @@ journalctl --user -u dns-data-backup.service -n 50
 
 ---
 
-## 🎓 Interview Talking Points
-
-### **Technical Highlights**
-
-**1. Algorithmic Challenge - IPAM Next-IP Finder**
-- Converts IPs to longs for O(1) comparison
-- Linear scan with gap detection
-- Handles /24 (254 IPs) in <1ms
-- Edge cases: /32 (single host), /8 (16M IPs)
-
-**2. Performance Optimization**
-- JDBC batch: 2.5x faster than individual inserts
-- 40 parallel threads for network validation
-- HikariCP connection pooling
-- Aggressive timeout tuning (150ms TCP)
-
-**3. Production Engineering**
-- RFC-compliant validation (952/1123/1035)
-- Active IP detection prevents outages
-- Automated backups with GFS rotation
-- 95% test coverage with edge case handling
-
-**4. Architecture Decisions**
-- Why Java? Type safety, mature JDBC, performance
-- Why modular IPAM? Reusability, testability, SRP
-- Why 40 threads? Optimal speed/resource balance
-- Why HikariCP? Zero-overhead connection pooling
-
-### **Business Value**
-- **Cost savings:** $0 vs $20K+ (InfoBlox, BlueCat)
-- **Time savings:** 281x faster than manual
-- **Risk reduction:** Active IP detection prevents conflicts
-- **Scalability:** Handles 10K+ records sub-second
-
----
-
 ## 📈 Future Enhancements
 
 - [ ] IP Reservation system (bulk reserve/release)
@@ -293,16 +257,6 @@ journalctl --user -u dns-data-backup.service -n 50
 ## 📄 License
 
 MIT License
-
----
-
-## 👤 Author
-
-Built as part of enterprise DNS automation project demonstrating:
-- Full-stack development (Java, PostgreSQL, BIND)
-- Systems programming (network protocols, TCP/IP)
-- Performance optimization (parallel processing, batch operations)
-- Production engineering (backups, monitoring, validation)
 
 ---
 
